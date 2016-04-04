@@ -1,0 +1,7 @@
+*.lastbuildstate
+*.tlog
+*.idb
+*.pdb
+*.sdf
+/D3D/Chapter1/18Mesh-BoundingBox/Debug
+Debug
