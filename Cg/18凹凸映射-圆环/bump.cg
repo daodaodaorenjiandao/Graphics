@@ -1,0 +1,166 @@
+
+void vs_main(float2 parametric : POSITION,
+
+             out float4 position       : POSITION,
+             out float2 oTexCoord      : TEXCOORD0,
+             out float3 lightDirection : TEXCOORD1,
+             out float3 halfAngle      : TEXCOORD2,
+
+         uniform float3 lightPosition,  // Object-space
+         uniform float3 eyePosition,    // Object-space
+         uniform float4x4 modelViewProj)
+{
+  const float pi2 = 6.28318530;  // 2 times Pi
+  // Stetch texture coordinates counterclockwise
+  // over torus to repeat normal map in 6 by 2 pattern
+  float M = 6;//torusInfo[0];
+  float N = 2;//torusInfo[1];
+  oTexCoord = parametric * float2(-8, 2);
+  // Compute torus position from its parameteric equation
+  
+  
+  float cosS, sinS;
+  sincos(pi2 * parametric.x, sinS, cosS);
+  float cosT, sinT;
+  sincos(pi2 * parametric.y, sinT, cosT);
+  float3 torusPosition = float3((M + N * cosT) * cosS,
+                                (M + N * cosT) * sinS,
+                                N * sinT);
+  position = mul(modelViewProj, float4(torusPosition, 1));
+  
+  
+  // Compute per-vertex rotation matrix
+  float3 dPds = float3(-sinS*(M+N*cosT), cosS*(M+N*cosT), 0);
+  float3 norm_dPds = normalize(dPds);
+  float3 normal = float3(cosS * cosT, sinS * cosT, sinT);		 // nornalized
+  float3 dPdt = cross(normal, norm_dPds);
+  float3x3 rotation = float3x3(norm_dPds,
+                               dPdt,
+                               normal);
+                               
+	                
+  // Rotate object-space vectors to texture space
+  float3 eyeDirection = eyePosition - torusPosition;
+  lightDirection = lightPosition - torusPosition;
+  lightDirection = mul(rotation, lightDirection);
+  eyeDirection = mul(rotation, eyeDirection);
+  halfAngle = normalize(normalize(lightDirection) +
+                        normalize(eyeDirection));
+}
+
+// This is C8E4f_specSurf from "The Cg Tutorial" (Addison-Wesley, ISBN
+// 0321194969) by Randima Fernando and Mark J. Kilgard
+
+float3 expand(float3 v) { return (v-0.5)*2; }
+
+void ps_main(float2 normalMapTexCoord : TEXCOORD0,
+                   float3 lightDirection    : TEXCOORD1,
+                   float3 halfAngle         : TEXCOORD2,
+
+               out float4 color : COLOR,
+               
+           uniform sampler2D   normalMap,
+           uniform samplerCUBE normalizeCube)
+{
+  // Fetch and expand range-compressed normal
+  float3 normalTex = tex2D(normalMap, normalMapTexCoord).xyz;
+  float3 normal = expand(normalTex);
+  // Fetch and expand normalized light vector
+  float3 normLightDirTex = texCUBE(normalizeCube,
+                                   lightDirection).xyz;
+  float3 normLightDir = expand(normLightDirTex);
+  // Fetch and expand normalized half-angle vector
+  float3 normHalfAngleTex = texCUBE(normalizeCube,
+                                    halfAngle).xyz;
+  float3 normHalfAngle = expand(normHalfAngleTex);
+ 
+  // Compute diffuse and specular lighting dot products
+  float diffuse = saturate(dot(normal, normLightDir));
+  float specular = saturate(dot(normal, normHalfAngle));
+  // Successive multiplies to raise specular to 8th power
+  float specular2 = specular*specular;
+  float specular4 = specular2*specular2;
+  float specular8 = specular4*specular4;
+  
+  //define color
+	float ambient = 0.3;
+	float3 lightColor = float3(1.0,0.9,0.9);
+	float3 DiffuseMaterial = float3(0.9, 0.6, 0.3);
+	float3 SpecularMaterial = float3( 1, 1, 1 );
+
+	color.rgb = (ambient + diffuse) * (DiffuseMaterial * lightColor) + specular * (SpecularMaterial * lightColor);
+	color.a = 1;
+
+
+}
+
+//==================================================================================================//
+float4 vs_main0(float4 position : POSITION,
+							float2 texCoord : TEXCOORD0,
+							
+							out float2 oTexCoord : TEXCOORD0,
+							out float3 oLightDir : TEXCOORD1,
+							out float3 oEyeDir : TEXCOORD2,
+							
+							uniform float4x4 worldViewProj,
+							uniform float3 lightPos,		//object space
+							uniform float3 eyePos				//object space
+							) : POSITION
+{
+	float4 oPosition;
+	oPosition = mul(worldViewProj,position);
+	//oPosition = position;		//test
+	oTexCoord = texCoord;
+//	lightPos = float3( -8, 0, 15);
+//	eyePos = float3(0, 0, 18 );
+	
+	oLightDir = lightPos - position.xyz;		//这里没有对物体的position进行变换是因为程序中没有设置世界变换矩阵.设置为object space
+	oEyeDir = eyePos - position.xyz;
+	
+	return oPosition;
+}
+
+float3 expand0(float3 v)
+{
+	v = (v - 0.5) * 2;
+	return v;
+}
+
+float4 ps_main0(float2 texCoord : TEXCOORD0,
+							float3 lightDir : TEXCOORD1,
+							float3 eyeDir : TEXCOORD2,
+							
+							uniform sampler2D normalMap,
+							uniform samplerCUBE normalizeCube) : COLOR
+{
+	float power = 8.f;
+	float4 color;
+	lightDir = texCUBE(normalizeCube,lightDir).xyz;		//normalize lightDir
+	lightDir = expand(lightDir);													
+	
+	eyeDir = texCUBE(normalizeCube,eyeDir).xyz;				//normalize eyeDir
+	eyeDir = expand(eyeDir);
+	
+	float3 halfAngleDir = lightDir + eyeDir;		// <<==>> (lightDir + eyeDir) / 2,因为要规范化，所以有无系数无关
+	halfAngleDir = texCUBE(normalizeCube,halfAngleDir).xyz;		//normalize halfAngleDir
+	halfAngleDir = expand(halfAngleDir);
+	
+	float3 normal;
+	normal = tex2D(normalMap,texCoord).xyz;		//这是已经标准化的，且被压缩的
+	normal = expand(normal);
+	
+	float diffuse,specular;
+	diffuse = saturate(dot(lightDir,normal));
+	specular = saturate(dot(halfAngleDir,normal));
+	specular = pow(specular,power);
+	
+	//define color
+	float ambient = 0.3;
+	float3 lightColor = float3(1.0,0.9,0.9);
+	float3 DiffuseMaterial = float3(0.9, 0.6, 0.3);
+	float3 SpecularMaterial = float3( 1, 1, 1 );
+
+	color.rgb = (ambient + diffuse) * (DiffuseMaterial * lightColor) + specular * (SpecularMaterial * lightColor);
+	color.a = 1;
+	return color;
+}

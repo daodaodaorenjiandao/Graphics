@@ -1,0 +1,62 @@
+
+float4 vs_main(float4 position : POSITION,
+							float3 normal : NORMAL,
+							
+							out float3 oLightDir : TEXCOORD0,
+							out float3 oNormal : TEXCOORD1,
+							out float3 oEyeDir : TEXCOORD2,
+							
+							uniform float4x4 worldViewProj,
+							uniform float3 eyePosition
+							) : POSITION
+{
+	float4 oPosition;
+	oPosition = mul(worldViewProj,position);
+	
+	float3 lightPosition = float3(2,2,-3);
+	oLightDir = lightPosition - position.xyz;
+	oNormal = normal;
+	
+	oEyeDir = eyePosition - position.xyz;
+
+	
+	return oPosition;
+}
+
+float4 ps_main(float4 objColor : COLOR,
+							float3 lightDir : TEXCOORD0,
+							float3 normal : TEXCOORD1,
+							float3 eyeDir : TEXCOORD2) : COLOR
+{
+	float4 color;
+	normal = normalize(normal);
+	lightDir = normalize(lightDir);
+	eyeDir = normalize(eyeDir);
+	
+	float halfDir = normalize(eyeDir + lightDir);
+	
+	float diffuse,specular;
+	diffuse = dot(normal,lightDir);
+	if(diffuse < 0)
+	{
+		diffuse = 0;
+		specular = 0;
+	}
+	else
+	{
+		specular = pow(max(dot(normal,halfDir),0),8);		//unuse
+	}
+	
+	if(diffuse < 0.3f)										//这里可用利用1D纹理来代替接替函数
+		color.xyz = 0.3;
+	else if(diffuse < 0.6f)
+		color.xyz = 0.6;
+	else
+		color.xyz = 0.9;
+		
+	if(abs(dot(eyeDir,normal)) < 0.2)			//这种方法描边将不准确！可以利用龙书中的偏移顶点的方法来描边;或晚上查询其他方法！边缘检测：http://www.cnblogs.com/hmxp8/archive/2012/03/19/2407000.html
+		color.xyz = float3(1,1,0);
+	
+	color.w = 1;
+	return color;
+}

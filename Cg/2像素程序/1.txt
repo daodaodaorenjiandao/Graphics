@@ -1,0 +1,16 @@
+vs_2_x
+// cgc version 3.1.0013, build date Apr 18 2012
+// command line args: -profile vs_2_x
+// source file: C2E1V_green.cg
+//vendor NVIDIA Corporation
+//version 3.1.0.13
+//profile vs_2_x
+//program VS_main
+//var float4 position : $vin.POSITION0 : ATTR0 : 0 : 1
+//var float4 VS_main.position : $vout.POSITION : HPOS : -1 : 1
+//var float4 VS_main.color : $vout.COLOR0 : COL0 : -1 : 1
+//const c[0] = 0.5 0
+def c0, 0.50000000, 0.00000000, 0, 0
+dcl_position0 v0
+mov oPos, v0
+mov oD0, c0.xxyy

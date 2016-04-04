@@ -1,0 +1,131 @@
+
+
+void main_vs(float4 position : POSITION,
+			 float4 normal : NORMAL,
+
+			 out float4 oPosition : POSITION,
+			 out float3 worldPosition : TEXCOORD0,
+			 out float3 oNormal : TEXCOORD1,
+
+			 uniform float4x4 worldMatrix,
+			 uniform float4x4 worldViewProjMatrix)
+{
+	worldPosition = mul(worldMatrix, position).xyz;
+	//记得对normal进行变换!!!
+	normal.w = 0;
+	worldMatrix = inverse(transpose(worldMatrix));
+	oNormal = mul(worldMatrix, normal).xyz;
+
+	oPosition = mul(worldViewProjMatrix, position);
+}
+
+//计算光的衰减
+float attenuationLighting(float3 vertexPosition, float3 lightPosition, float k0, float k1, float k2)
+{
+	float dis = distance(vertexPosition, lightPosition);
+	return 1.f / (k0 + k1 * dis + k2 * dis * dis);
+}
+
+//只计算内角
+float computSpotEffect(float3 lightPos, float3 lightDirection, float innerCone, float3 vertexPosition)
+{
+	lightDirection = normalize(lightDirection);
+	float3 dotDirection = normalize(vertexPosition - lightPos);
+	float cosAngleForSpot, cosAngleForDot;
+	cosAngleForDot = dot(lightDirection, dotDirection);
+	cosAngleForSpot = cos(innerCone);
+
+	float spotEffect;
+	if (cosAngleForDot < cosAngleForSpot)
+		spotEffect = 0.f;
+	else
+		spotEffect = 1.f;
+	return spotEffect;
+}
+
+//内角和外角共同作用
+float computSpotEffect(float3 lightPos, float3 lightDirection, float innerCone,float outerCone, float3 vertexPosition)
+{
+	lightDirection = normalize(lightDirection);
+	float3 dotDirection = normalize(vertexPosition - lightPos);
+	float cosAngleForSpot, cosAngleForDot;
+	cosAngleForDot = dot(lightDirection, dotDirection);
+
+	innerCone = cos(innerCone);
+	outerCone = cos(outerCone);
+
+	float spotEffect = 1.f;
+	spotEffect = smoothstep(outerCone, innerCone, cosAngleForDot);
+	return spotEffect;
+}
+
+float4 main_ps(float3 position : TEXCOORD0,
+			   float3 normal : TEXCOORD1,
+
+			   uniform float3 ambient,
+			   uniform float3 lightColor,	//diffuse and specular
+			   uniform float3 lightPos,
+			   uniform float3 lightDirectional,
+			   uniform float  innerCone,
+			   uniform float  outerCone,
+			   uniform float3 lightAttenuation,
+			   uniform float3 eyePos,
+			   uniform float3 ke,
+			   uniform float3 ka,
+			   uniform float3 kd,
+			   uniform float3 ks,
+			   uniform float shininess) : COLOR
+{
+	normal = normalize(normal);
+
+	float4 color;
+
+	float3 emissiveColor, ambientColor, diffuseColor, specularColor;
+	//emissive
+	emissiveColor = ke;
+	//ambient
+	ambientColor = ambient * ka;
+
+	float3 lightDirection, eyeDirection;
+	float3 hDirection;	//半角方向
+	float diffuse;
+
+	lightDirection = normalize(lightPos - position);
+
+	//diffuse
+	diffuse = max(dot(normal, lightDirection), 0);
+	diffuseColor = kd * diffuse * lightColor;
+
+	//specular
+	if (diffuse < 0.000001f)	//diffuse == 0
+		specularColor = float3(0, 0, 0);
+	else
+	{
+		eyeDirection = normalize(eyePos - position);
+		hDirection = normalize(lightDirection + eyeDirection);
+
+		float3 R = 2 * dot(normal, lightDirection) * normal - lightDirection;
+		R = normalize(R);
+
+		float specular;
+		specular = dot(hDirection, normal);
+		specular = max(specular, 0);
+
+		//specular = max(dot(R, normal), 0);
+
+		specularColor = ks * lightColor * pow(specular, shininess);
+	}
+
+	//计算衰减
+	float attenuation = attenuationLighting(position, lightPos, lightAttenuation.x, lightAttenuation.y, lightAttenuation.z);
+	attenuation = 1.f;
+
+	//计算聚光灯效果
+	float spotEffect;
+	spotEffect = computSpotEffect(lightPos, lightDirectional, innerCone,outerCone, position);
+
+	color.rgb = ambientColor + spotEffect * attenuation * (diffuseColor + specularColor);
+	color.a = 1;
+	return color;
+}
+

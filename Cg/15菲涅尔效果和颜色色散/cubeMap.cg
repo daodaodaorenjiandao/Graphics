@@ -1,0 +1,65 @@
+
+float4 main_vs(float4 position : POSITION,
+								float4 normal : NORMAL,
+								
+								uniform float4x4 worldMatrix,
+								uniform float4x4 worldViewProjMatrix,
+								uniform float3 eyePosition,
+								uniform float bias,
+								uniform float scale,
+								uniform float power,
+								uniform float3 etaRatio,
+								
+								out float3 R : TEXCOORD0,
+								out float3 TRed : TEXCOORD1,
+								out float3 TGreen : TEXCOORD2,
+								out float3 TBlue : TEXCOORD3,
+								out float reflectFactor : COLOR) : POSITION
+{
+	float4 oPosition = mul(worldViewProjMatrix,position);
+	float3 worldPosition = mul(worldMatrix,position).xyz;
+	
+	worldMatrix = inverse(transpose(worldMatrix));		//可在宿主程序中优化
+	float3 N = mul(worldMatrix,normal).xyz;
+	N = normalize(N);
+	float3 I = worldPosition - eyePosition;						//入射光线向量
+	
+	//计算反射向量
+	R = reflect(I,N);			//计算反射向量时，不需要将入射光线进行规范化，这样插值更加准确
+	//计算折射向量
+	I = normalize(I);						//规范化入射向量，以便计算折射光线，这是cg文档中要求的！
+	TRed = refract(I,N,etaRatio.r);
+	TGreen = refract(I,N,etaRatio.g);
+	TBlue = refract(I,N,etaRatio.b);
+	//计算反射因子
+
+	reflectFactor = bias + scale * pow(1 + dot(I,N),power);		
+//	reflectFactor = max(0,min(1,reflectFactor));			//这里不使用该语句是因为reflectFactor被绑定到了COLOR语义，插值的颜色自动的被限制在[0,1]
+	
+	return oPosition;
+}
+
+float4 main_ps(float3 R : TEXCOORD0,
+							 float3 TRed : TEXCOORD1,
+							 float3 TGreen : TEXCOORD2,
+							 float3 TBlue : TEXCOORD3,
+							 float reflectFactor : COLOR,
+							 uniform samplerCUBE environmentMap) : COLOR
+{
+	float4 finalColor,reflectColor,refractColor;
+	//comput reflectColor
+	reflectColor = texCUBE(environmentMap,R);
+	
+	//comput refractColor
+	refractColor.r = texCUBE(environmentMap,TRed).r;
+	refractColor.g = texCUBE(environmentMap,TGreen).g;
+	refractColor.b = texCUBE(environmentMap,TBlue).b;
+	refractColor.a = 1;
+	
+	//comput finalColor
+	finalColor = reflectFactor * reflectColor + (1 - reflectFactor) * refractColor;
+	//or 
+	//finalColor = lerp(refractColor,reflectColor,reflectFactor);
+	
+	return finalColor;
+}

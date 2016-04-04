@@ -1,0 +1,73 @@
+
+
+void main_vs(float4 position : POSITION,
+			 float4 normal : NORMAL,
+
+			 out float4 oPosition : POSITION,
+			 out float4 oColor : COLOR,
+
+			   uniform float4x4 worldMatrix,
+			   uniform float4x4 worldViewProjMatrix,
+
+			   uniform float3 ambient,
+			   uniform float3 lightColor,	//diffuse and specular
+			   uniform float3 lightPos,
+			   uniform float3 eyePos,
+			   uniform float3 ke,
+			   uniform float3 ka,
+			   uniform float3 kd,
+			   uniform float3 ks,
+			   uniform float shininess)
+{
+	float3 worldPosition = mul(worldMatrix, position).xyz;
+	//worldPosition = position.xyz;
+	//记得对normal进行变换!!!
+	normal.w = 0;
+	worldMatrix = inverse(transpose(worldMatrix));
+	normal = mul(worldMatrix, normal);
+
+	float3 N = normalize(normal.xyz);
+
+	oPosition = mul(worldViewProjMatrix, position);
+	//worldViewProjMatrix = transpose(worldViewProjMatrix);
+	//oPosition = mul(position,worldViewProjMatrix);		//区别?  还有就是world view proj 相乘的顺序是否影响这个
+	
+	float3 emissiveColor, ambientColor, diffuseColor, specularColor;
+	//emissive
+	emissiveColor = ke;
+	//ambient
+	ambientColor = ambient * ka;
+
+	float3 lightDirection, eyeDirection;
+	float3 hDirection;	//半角方向
+	float diffuse;
+
+	lightDirection = normalize(lightPos - worldPosition);
+
+	//diffuse
+	diffuse = max(dot(N, lightDirection), 0);
+	diffuseColor = kd * diffuse * lightColor;
+
+	//specular
+	if (diffuse < 0.000001f)	//diffuse == 0
+		specularColor = float3(0, 0, 0);
+	else
+	{
+		eyeDirection = normalize(eyePos - worldPosition); 
+		hDirection = normalize(lightDirection + eyeDirection);
+
+		float3 R = 2 * dot(N, lightDirection) * N - lightDirection;
+		R = normalize(R);
+
+		float specular;
+		//specular = dot(hDirection, normal);
+		//specular = max(specular, 0);
+
+		specular = max(dot(R, N),0);
+
+		specularColor = ks * lightColor * pow(specular, shininess);
+	}
+	
+	oColor.rgb = ambientColor + diffuseColor + specularColor;
+	oColor.a = 1;
+}

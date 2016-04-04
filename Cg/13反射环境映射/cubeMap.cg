@@ -1,0 +1,31 @@
+
+float4 main_vs(float4 position : POSITION,
+								float4 normal : NORMAL,
+								
+								uniform float4x4 worldMatrix,
+								uniform float4x4 worldViewProjMatrix,
+								uniform float3 eyePosition,
+								
+								
+								out float3 reflectionNormal) : POSITION
+{
+
+	float4 oPosition = mul(worldViewProjMatrix,position);
+	position = mul(worldMatrix,position);					//先前犯的一个错误是：worldMatrtix变换为了转置矩阵的逆矩阵，导致边界有部分锯齿
+	worldMatrix = inverse(transpose(worldMatrix));
+	float3 I,N;
+	N= mul(worldMatrix,normal).xyz;				//先前计算法向量所犯的一个错误，就是规范化了变换后的normal，然后将xyz分量赋值给N,显然N不是规范化的！
+	N = normalize(N);
+	I = position.xyz - eyePosition;
+	
+	reflectionNormal = reflect(I,N);
+	return oPosition;
+}
+
+float4 main_ps(float3 reflectionNormal,
+							 uniform samplerCUBE environmentMap) : COLOR
+{
+	float4 color = texCUBE(environmentMap,reflectionNormal);
+
+	return color;
+}

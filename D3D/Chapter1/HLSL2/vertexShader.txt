@@ -1,0 +1,46 @@
+matrix ViewMatrix;
+matrix ViewProjMatrix;
+
+
+vector lightDirection;
+vector Color;
+
+struct VS_INPUT
+{
+	vector position : POSITION;
+	vector normal : NORMAL;
+};
+
+struct VS_OUTPUT
+{
+	vector position : POSITION;
+	float2 uvCoord : TEXCOORD;
+	vector diffuse : COLOR;
+};
+
+
+
+VS_OUTPUT Main(VS_INPUT input)
+{
+	VS_OUTPUT output = (VS_OUTPUT)0;
+
+	output.position = mul(input.position, ViewProjMatrix);
+
+	input.normal.w = 0.0f;
+	lightDirection.w = 0.0f;
+
+	input.normal = mul(input.normal, ViewMatrix);
+	lightDirection = mul(lightDirection, ViewMatrix);
+
+	float u = dot(input.normal, lightDirection);
+	if (u < 0.0f)
+		u = 0.0f;
+
+	float v = 0.5f;
+
+	output.uvCoord.x = u;
+	output.uvCoord.y = v;
+	output.diffuse = Color;
+
+	return output;
+}

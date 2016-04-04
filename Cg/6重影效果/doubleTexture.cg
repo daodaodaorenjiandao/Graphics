@@ -1,0 +1,57 @@
+
+void VS_main(float4 position : POSITION,
+				float2 uv : TEXCOORD0,
+				
+				uniform float2 separation0,
+				uniform float2 separation1,
+
+				out float2 oTextureCoord1 : TEXCOORD0,
+				out float2 oTextureCoord2 : TEXCOORD1,
+				out float2 oTextureCoord3 : TEXCOORD2,
+				out float2 oTextureCoord4 : TEXCOORD3,
+				out float4 oPosition : POSITION)
+{
+	oPosition = float4(position.xy,0,1);
+
+	oTextureCoord1 = uv + separation0;
+	oTextureCoord2 = uv + separation1;
+	oTextureCoord3 = uv + separation0.yx;
+	oTextureCoord4 = uv + separation1.yx;
+}
+
+float4 PS_main(	float2 uv0 : TEXCOORD0,
+				float2 uv1 : TEXCOORD1,
+				float2 uv2 : TEXCOORD2,
+				float2 uv3 : TEXCOORD3,
+				uniform sampler2D textureSampler) : COLOR
+{
+	float4 textureColor0,textureColor1;
+	textureColor0 = tex2D(textureSampler,uv0);
+	textureColor1 = tex2D(textureSampler,uv1);
+	
+/*
+	if(uv0.x < 0.f || uv0.y < 0.f || uv0.x > 1.f || uv0.y > 1.f)	//限制边界 
+		textureColor0 = float4(0,0,0,1);
+	if(uv1.x < 0.f || uv1.x > 1.f || uv1.y < 0.f || uv1.y > 1.f)
+		textureColor1 = float4(0,0,0,1);
+	*/	
+
+	float4 color;
+	color = lerp(textureColor0,textureColor1,0.5f);
+	//color = textureColor0 * textureColor1;
+
+	/*
+	//四重纹理
+	float4 textureColor3,textureColor4,color34;
+	textureColor3 = tex2D(textureSampler,uv2);
+	textureColor4 = tex2D(textureSampler,uv3);
+	if(uv2.x < 0.f || uv2.y < 0.f || uv2.x > 1.f || uv2.y > 1.f)	//限制边界
+		textureColor3 = float4(0,0,0,1);
+	if(uv3.x < 0.f || uv3.x > 1.f || uv3.y < 0.f || uv3.y > 1.f)
+		textureColor4 = float4(0,0,0,1);
+
+	color34 = lerp(textureColor3,textureColor4,0.5f);
+	color = lerp(color,color34,0.5f);
+	*/
+	return color;
+}

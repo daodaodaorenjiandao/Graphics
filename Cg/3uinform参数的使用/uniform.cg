@@ -1,0 +1,14 @@
+struct Output
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+};
+
+Output VS_main(in float4 position : POSITION,
+							uniform float4 color)
+{
+	Output output;
+	output.position = position;
+	output.color = color;
+	return output;
+}

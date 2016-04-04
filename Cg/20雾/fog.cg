@@ -1,0 +1,38 @@
+
+float4 vs_main(float4 position : POSITION,
+
+							out float4 oColor : COLOR,
+							out float oDensity : TEXCOORD0,
+							out float oFogDistance : TEXCOORD1,
+							
+							uniform float4x4 worldView,
+							uniform float4x4 worldViewProj
+							) : POSITION
+{
+	float4 oPosition;
+	oPosition = mul(worldViewProj,position);
+	
+	float3 eyePosition  = mul(worldView,position).xyz;
+	oFogDistance = length(eyePosition);
+	
+	oColor = float4(1,1,1,1);														//纯白为物体的颜色
+	oDensity = -log2(0.94);			//参数范围应是0-1
+	
+	return oPosition;
+}
+
+float4 ps_main(float4 objColor : COLOR,
+							float fogDensity : TEXCOORD0,
+							float fogDistance : TEXCOORD1) : COLOR
+{
+	
+	float3 fogColor = float3(1,0,0);									//红色为雾的颜色
+	float fogExponent = fogDistance * fogDensity;			//该值接近0，则fogFactor就越接近1，也即越接近物体颜色；该值越大，则fogFactor就越接近0，其雾的颜色就越大！
+	float fogFactor = exp2(-abs(fogExponent));
+	
+	float4 color;
+	color.xyz = lerp(fogColor,objColor.xyz,fogFactor);
+	color.w = objColor.w;
+	
+	return color;
+}

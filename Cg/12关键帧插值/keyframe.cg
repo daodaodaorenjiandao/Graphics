@@ -1,0 +1,19 @@
+
+
+void main_vs(float3 positionA : POSITION,
+			 float3 positionB : NORMAL,
+
+			 out float4 oPosition : POSITION,
+			 out float4 oColor : COLOR,
+			 
+			 uniform float time)
+{
+	//用时间变量time作为B帧的权重，限定在[0,1]
+	if (time > 1.f)
+		time = 1.f; //return;	如果直接返回，将没有渲染结果。
+	float3 newPosition = lerp(positionA, positionB, time);
+	//float3 newPosition = lerp(positionA, positionB, time * time);
+	oPosition = float4(newPosition.xyz, 1);
+
+	oColor = float4(0, 1, 0, 1);
+}

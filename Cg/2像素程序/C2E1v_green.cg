@@ -1,0 +1,23 @@
+struct Output
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+};
+
+Output VS_main(in float4 position : POSITION)
+{
+	Output output;
+	output.position = position;
+	//output.position = float4(position.x,position.y,0.f,1.f);
+	output.color = position;
+	return output;
+}
+
+float4 PS_main(float4 color : COLOR) : COLOR
+{
+	color.r = min(max(0.f,color.r),1);
+	color.g = min(max(0.f,color.g),1);
+	color.b = 0 ;
+	color.a = 0;
+	return color;
+}

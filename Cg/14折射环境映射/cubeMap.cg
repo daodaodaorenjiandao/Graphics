@@ -1,0 +1,33 @@
+
+float4 main_vs(float4 position : POSITION,
+								float4 normal : NORMAL,
+								
+								uniform float4x4 worldMatrix,
+								uniform float4x4 worldViewProjMatrix,
+								uniform float3 eyePosition,
+								uniform float etaRatio,
+								
+								out float3 R) : POSITION
+{
+
+	float4 oPosition = mul(worldViewProjMatrix,position);
+	position = mul(worldMatrix,position);		
+	
+	worldMatrix = inverse(transpose(worldMatrix));
+	
+	float3 I,N;
+	N = mul(worldMatrix,normal).xyz;
+	N = normalize(N);
+	I = position.xyz - eyePosition;
+	I = normalize(I);
+	R = refract(I,N,etaRatio);
+	
+	return oPosition;
+}
+
+float4 main_ps(float3 R,
+							 uniform samplerCUBE environmentMap) : COLOR
+{
+	float4 color = texCUBE(environmentMap,R);
+	return color;
+}

@@ -1,0 +1,19 @@
+struct Output
+{
+	float4 position : POSITION;
+	float2 uv : TEXCOORD0;
+};
+
+Output VS_main(float4 position : POSITION,
+				float2 uv : TEXCOORD0)
+{
+	Output output;
+	output.position = position;
+	output.uv = uv;
+	return output;
+}
+
+float4 PS_main(float2 uv : TEXCOORD0,uniform sampler2D tex : TEX0) : COLOR
+{
+	return tex2D(tex,uv);
+}

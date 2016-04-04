@@ -1,0 +1,44 @@
+
+float4 vs_main(float4 position : POSITION,
+							float2 texCoord : TEXCOORD0,
+							
+							out float2 oTexCoord : TEXCOORD0,
+							out float3 oLightDir : TEXCOORD1,
+							
+							uniform float4x4 worldViewProj,
+							uniform float3 lightPos) : POSITION
+{
+	float4 oPosition;
+	oPosition = mul(worldViewProj,position);
+	oTexCoord = texCoord;
+	oLightDir = lightPos - position.xyz;		//这里没有对物体的position进行变换是因为程序中没有设置世界变换矩阵
+
+	
+	return oPosition;
+}
+
+float3 expand(float3 v)
+{
+	v = (v - 0.5) * 2;
+	return v;
+}
+
+float4 ps_main(float2 texCoord : TEXCOORD0,
+							float3 lightDir : TEXCOORD1,
+							
+							uniform sampler2D samplerTexture,
+							uniform samplerCUBE samplerCubeTexture) : COLOR
+{
+	float4 color;
+	//color = tex2D(samplerTexture,texCoord);
+	
+	float3 normal,light;
+	normal = tex2D(samplerTexture,texCoord).xyz;		//获取压缩的法向量
+	normal = expand(normal);
+	
+	light = texCUBE(samplerCubeTexture,lightDir);		//获取压缩的对应的单位向量
+	light = expand(light);									
+	color = dot(normal,light);		//这里的值有可能为负数，但利用了COLOR语义，将负数限制为0
+	//注意这里color的值为漫反射系数，在前面的光照中是要乘以颜色值的，这里没有显示的乘以颜色值，是因为光为白光！！！
+	return color;
+}

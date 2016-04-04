@@ -1,0 +1,24 @@
+
+
+void main_vs(float4 position : POSITION,
+			 float4 v : TEXCOORD0,
+			 float time : TEXCOORD1,
+
+			 out float4 oPosition : POSITION,
+			 out float4 oColor : COLOR,
+			 out float oPSize : PSIZE,
+
+			   uniform float4x4 worldMatrix,
+			   uniform float4x4 worldViewProjMatrix,
+			   uniform float4 acceleration,
+			   uniform float globalTime)
+{
+	float deltaTime = globalTime - time;
+	position = position + v * deltaTime + 0.5f * acceleration * deltaTime * deltaTime;
+	oPosition = mul(worldViewProjMatrix, position);
+	
+	oColor = float4(deltaTime,deltaTime,deltaTime,1);
+	//oColor = float4(1, 1, 1, 1);
+	
+	oPSize = -8.0 * deltaTime * deltaTime + 8 * deltaTime + 0.1f * oPosition.y + 1;
+}

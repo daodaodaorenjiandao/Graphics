@@ -1,0 +1,50 @@
+
+void main_vs(float4 position : POSITION,
+						 float4 normal : NORMAL,
+						
+						 out float4 oPosition : POSITION,
+						 out float4 oTexCoordProj : TEXCOORD0,
+						 out float oDiffuse : TEXCOORD1,
+						 
+						 
+						 uniform float4x4 worldMatrix,
+						 uniform float4x4 worldViewProj,
+						 uniform float4x4 worldViewProjTex,
+						 uniform float3 lightPos)
+{
+	oPosition = mul(worldViewProj,position);
+	
+	worldMatrix = inverse(transpose(worldMatrix));
+	
+	
+	float3 worldPos,L,N;
+	worldPos = mul(worldMatrix,position).xyz;
+	L = lightPos - worldPos;
+	L = normalize(L);
+	
+	N = mul(worldMatrix,normal).xyz;
+	N = normalize(N);
+	
+	oTexCoordProj = mul(worldViewProjTex,position);
+	oDiffuse = dot(L,N);
+
+}
+
+float4 main_ps(float4 texCoordProj : TEXCOORD0,
+							 float diffuse : TEXCOORD1,
+							 
+							 uniform sampler2D samplerTex) : COLOR
+{
+	float4 color = diffuse;
+	float4 texColor = tex2Dproj(samplerTex,texCoordProj);
+	//float4 texColor = tex2D(samplerTex,texCoordProj.xy / texCoordProj.w);
+	//float4 texColor = tex2D(samplerTex,texCoordProj.xy);
+	
+	//float x = texCoordProj.x / texCoordProj.w;
+	//float y = texCoordProj.y / texCoordProj.w;
+	//if(x < 0 || y < 0 || x > 1 || y > 1)
+	//	return color;
+	
+	
+	return color * texColor;
+}

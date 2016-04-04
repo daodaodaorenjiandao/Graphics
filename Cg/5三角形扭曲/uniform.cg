@@ -1,0 +1,22 @@
+struct Output
+{
+	float4 position : POSITION;
+	float4 color : COLOR;
+};
+
+Output VS_main(in float4 position : POSITION,
+							float4 color : COLOR,
+							uniform float twisting,
+							uniform float2 origin)
+{
+	Output output;
+	float angle = twisting * length(position.xy - origin);
+	float cosLength,sinLength;
+	sincos(angle,sinLength,cosLength);
+	output.position.x = cosLength * position.x - sinLength * position.y ;
+	output.position.y = sinLength * position.x + cosLength * position.y ;
+	output.position.z = 0;
+	output.position.w = 1;
+	output.color = color;
+	return output;
+}
